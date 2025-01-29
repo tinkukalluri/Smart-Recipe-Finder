@@ -103,7 +103,7 @@ if recent_meals:
 st.write("### Ingredients Available in Your Fridge")
 ingredients = st.text_area("List the ingredients (comma-separated)", st.session_state.vegetables)
 st.session_state.vegetables = ingredients
-st.subheader("------------------------------------OR-------------------------------------")
+st.subheader("           OR          ")
 # Upload image
 uploaded_file = st.file_uploader("Upload an image of fruits and vegetables", type=["jpg", "jpeg", "png"])
 
