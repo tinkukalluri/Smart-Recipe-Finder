@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import json
-
+from PIL import Image
 # Initialize Gemini API
 genai.configure(api_key="AIzaSyB5r8XQy5pHg7GWBK3qhd6nuwV5epAqZ0k")
 model = genai.GenerativeModel("gemini-1.5-flash")
@@ -19,7 +19,6 @@ cuisine = st.sidebar.selectbox("Preferred Cuisine", ["No Preference", "Italian",
 time = st.sidebar.slider("Time Available (minutes)", 5, 120, 30)
 skill = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "Advanced", "Expert"], index=0)
 
-import streamlit as st
 
 # Initialize session state for tracking selected values
 if 'appliances' not in st.session_state:
@@ -30,6 +29,8 @@ if 'allergies' not in st.session_state:
     st.session_state.allergies = ["None"]
 if 'health_goals' not in st.session_state:
     st.session_state.health_goals = ["None"]
+if "vegetables" not in st.session_state:
+    st.session_state.vegetables =  "eggs, tomatoes, cheese, onions"
 
 # Available Appliances
 appliances = st.sidebar.multiselect(
@@ -93,19 +94,49 @@ if st.sidebar.button("Add to Recent Meals"):
         st.sidebar.warning("Please enter a valid meal name.")
 
 # Display Recent Meals
-st.write("### Recent Meals")
-for meal in recent_meals:
-    st.write(f"- {meal['name']}")
+if recent_meals:
+    st.write("### Recent Meals")
+    for meal in recent_meals:
+        st.write(f"- {meal['name']}")
 
 # Main Input Section
 st.write("### Ingredients Available in Your Fridge")
-ingredients = st.text_area("List the ingredients (comma-separated)", "eggs, tomatoes, cheese, onions")
+ingredients = st.text_area("List the ingredients (comma-separated)", st.session_state.vegetables)
+st.session_state.vegetables = ingredients
+st.subheader("------------------------------------OR-------------------------------------")
+# Upload image
+uploaded_file = st.file_uploader("Upload an image of fruits and vegetables", type=["jpg", "jpeg", "png"])
+
+
 
 # Initialize session state for recipes and viewed recipe
 if 'viewed_recipe' not in st.session_state:
     st.session_state.viewed_recipe = None  # Store the selected recipe index
 if 'recipes' not in st.session_state:
     st.session_state.recipes = []  # Store fetched recipes
+
+
+if uploaded_file is not None:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
+
+    # Use Gemini model to analyze the image
+    response = model.generate_content(
+        contents=[
+            """
+                Identify all the fruits and vegetables in this image. Return only the names of the fruits and vegetables, separated by commas.
+                return the results with comma seperated values
+            """,
+            image
+        ]
+    )
+
+    # Display the results
+    st.subheader("Identified Fruits and Vegetables:")
+    st.write(response.text)
+    st.session_state.vegetables = response.text
+
 
 # Button to fetch recipes
 if st.button("Find Recipes"):
@@ -116,7 +147,7 @@ if st.button("Find Recipes"):
         - Cuisine Preference: {cuisine}
         - Time Available: {time} minutes
         - Skill Level: {skill}
-        - Available Ingredients: {ingredients}
+        - Available Ingredients: {st.session_state.vegetables}
         - Available Appliances: {', '.join(appliances) if appliances else 'None'}
         - Dietary Restrictions: {', '.join(dietary_restrictions) if dietary_restrictions else 'None'}
         - Allergies: {', '.join(allergies) if allergies else 'None'}
@@ -153,6 +184,7 @@ if st.button("Find Recipes"):
     """
     
     response = model.generate_content(prompt)
+    print("Prompt:", prompt)
     print("LLM response:", response.text)
 
     if response:
